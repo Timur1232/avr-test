@@ -2,6 +2,12 @@
 
 My personal exploration of AVR MCU ATMega8535L-8PI.
 
+Most developed example is digit-interrupt one.
+
+![photo of real schema](./docs/real.jpg)
+
+![equivalent schema](./docs/proteus.png)
+
 # Dependences
 
 - GNU AVR toolchain (avr-gcc, avr-objcopy)
