@@ -1,9 +1,9 @@
 #include <avr/io.h>
 
 int main(void) {
-    DDRA = 1;
+    DDRD |= (1 << PD7);
     while (1) {
-        PORTA = !(PINA & 1);
+        PORTD ^= (1 << PD7);
     }
     return 0;
 }
