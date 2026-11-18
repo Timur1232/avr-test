@@ -4,7 +4,8 @@
 
 .section .progmem
 hello_str: .asciz "Hello World!\r\n"
-sine: .byte 128, 140, 153, 165, 177, 188, 199, 209, 218, 227, 234, 240, 246, 250, 253, 255, 255, 255, 253, 250, 246, 240, 234, 227, 218, 209, 199, 188, 177, 165, 153, 140, 128, 116, 103, 91, 79, 68, 57, 47, 38, 29, 22, 16, 10, 6, 3, 1, 0, 1, 3, 6, 10, 16, 22, 29, 38, 47, 57, 68, 79, 91, 103, 116
+nl_str: .asciz "\r\n"
+; sine: .byte 128, 140, 153, 165, 177, 188, 199, 209, 218, 227, 234, 240, 246, 250, 253, 255, 255, 255, 253, 250, 246, 240, 234, 227, 218, 209, 199, 188, 177, 165, 153, 140, 128, 116, 103, 91, 79, 68, 57, 47, 38, 29, 22, 16, 10, 6, 3, 1, 0, 1, 3, 6, 10, 16, 22, 29, 38, 47, 57, 68, 79, 91, 103, 116
 
 .section .text
 
@@ -26,33 +27,58 @@ main:
 
     rcall set_timer_for_uart
 
-    ldi r30, lo8(hello_str)
-    ldi r31, hi8(hello_str)
+    ; Disable analog comparator
+    sbi IO(ACSR), ACD
+
+    ; Set ADC3 pin as ADC input, VCC as ref
+    ldi r16, _BV(MUX0) | _BV(MUX1)
+    out IO(ADMUX), r16
+
+    ; Disable digital input on PB3 (ADC3)
+    sbi IO(DIDR0), ADC3D
+
+    ; Turn ADC on
+    ldi r16, _BV(ADEN)
+    out IO(ADCSRA), r16
+
+    ; LF + CR string
+    ldi r30, lo8(nl_str)
+    ldi r31, hi8(nl_str)
 
     sei
 
 main_loop:
 
+    ; Start ADC conversion
+    sbi IO(ADCSRA), ADSC
+
+main_loop_adc_wait:
+    ; Check if conversion ends
+    sbic IO(ADCSRA), ADSC
+    rjmp main_loop_adc_wait
+
+    ; Read ADC result
+    in r16, IO(ADCL)
+    in r17, IO(ADCH)
+
+    ; Send result via uart
+    rcall uart_send_byte
+    mov r17, r16
+    rcall uart_send_byte
+
+    ; Send LF + CR
     rcall uart_send_string
 
+    ; Wait ~1 second
+    ldi r17, 4
+main_loop_delay_again1:
+    ldi r16, 200
+main_loop_delay_again2:
     rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
-    rcall delay
+    dec r16
+    brne main_loop_delay_again2
+    dec r17
+    brne main_loop_delay_again1
 
     rjmp main_loop
 
@@ -216,13 +242,20 @@ TIM0_COMPA_vect_uart_done:
     reti
 
 
+; Delay for ~1 ms
 delay:
-    ldi r20, 0xFF
+    push r20            ; 2
+    push r21            ; 2
+
+    ldi r20, 19         ; 1
 delay_loop1:
-    ldi r21, 0xFF
+    ldi r21, 0xFF       ; 1
 delay_loop2:
-    dec r21
-    brne delay_loop2
-    dec r20
-    brne delay_loop1
+    dec r21             ; 1
+    brne delay_loop2    ; 1/2
+    dec r20             ; 1
+    brne delay_loop1    ; 1/2
+
+    pop r21             ; 2
+    pop r20             ; 2
     ret
