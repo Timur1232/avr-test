@@ -1,16 +1,16 @@
 .PHONY: deploy size
 
-deploy: test.hex size
-	avrdude -c usbasp -p t13 -P usb -B 9.6 -U flash:w:test.hex:i
+deploy: main.hex size
+	avrdude -c usbasp -p t13 -P usb -B 9.6 -U flash:w:main.hex:i
 
-size: test.elf
-	avr-size test.elf
+size: main.elf
+	avr-size main.elf
 
-test.hex: test.elf
-	avr-objcopy -O ihex test.elf test.hex
+main.hex: main.elf
+	avr-objcopy -O ihex main.elf main.hex
 
-test.elf: test.S
-	avr-gcc -mmcu=attiny13a -Os -g -o test.elf test.S
+main.elf: main.S
+	avr-gcc -mmcu=attiny13a -Os -g -o main.elf main.S
 
 build:
 	mkdir build

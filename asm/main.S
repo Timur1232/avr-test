@@ -67,16 +67,14 @@ main_loop_adc_wait:
 
 
     ; R17:R16 = ADCH:ADCL
-    ; Ranges: 340 = 0x0154,  680 = 0x02A8
+    ; Ranges: 340 = 0x0154, 680 = 0x02A8
     ;
-    ; 340 ~ 1023 / 3
-    ; 2(ADCH) + 168(ADCL) ~ 340*2 = 680
-    ; Used "<", because no unsigned LE instruction
+    ; 340 ~ 1024 / 3
     ;
-    ; if !(ADCH >= 0x1 || ADCL >= 0x54):
+    ; if ADC < 340:
     ;   LED1 = 0
     ;   LED2 = 0
-    ; else if !(ADCH >= 0x2 && ADCL >= 0xA8):
+    ; else if ADC < 680:
     ;   LED1 = 1
     ;   LED2 = 0
     ; else:
