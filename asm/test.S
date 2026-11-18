@@ -2,6 +2,9 @@
 
 #define IO(x) _SFR_IO_ADDR(x)
 
+#define LED1 0
+#define LED2 1
+
 .section .progmem
 hello_str: .asciz "Hello World!\r\n"
 nl_str: .asciz "\r\n"
@@ -17,10 +20,11 @@ main:
     ldi r16, 0
     out IO(CLKPR), r16
 
-    ; Set PB0 (PWM) to output
-    sbi IO(DDRB), DDB0
-    ; Set PB4 (UART) to output
-    sbi IO(DDRB), DDB4
+    ; ; Set PB0 (PWM) to output
+    ; sbi IO(DDRB), DDB0
+    ; Set PB0, PB1 and PB4 (UART) to output
+    ldi r16, _BV(DDB0) | _BV(DDB1) | _BV(DDB4)
+    out IO(DDRB), r16
 
     ; Set PB4 high for UART Idle
     sbi IO(PORTB), PB4
@@ -60,6 +64,47 @@ main_loop_adc_wait:
     ; Read ADC result
     in r16, IO(ADCL)
     in r17, IO(ADCH)
+
+
+    ; 340 ~ 1023 / 3
+    ; 2(ADCH) + 168(ADCL) ~ 340*2 = 680
+    ; Used "<", because no unsigned LE instruction
+    ;
+    ; if !(ADCH >= 0x1 || ADCL >= 0x54):
+    ;   LED1 = 0
+    ;   LED2 = 0
+    ; else if !(ADCH >= 0x2 && ADCL >= 0xA8):
+    ;   LED1 = 1
+    ;   LED2 = 0
+    ; else:
+    ;   LED1 = 1
+    ;   LED2 = 1
+    cpi r17, 0x1
+    brge at_least_one_led
+    cpi r16, 0x55
+    brge at_least_one_led
+
+    cbi IO(PORTB), LED1
+    cbi IO(PORTB), LED2
+
+    rjmp led_end
+
+at_least_one_led:
+    cpi r17, 0x3
+    brge both_led
+    cpi r16, 0xA9
+    brge both_led
+
+    sbi IO(PORTB), LED1
+    cbi IO(PORTB), LED2
+
+    rjmp led_end
+
+both_led:
+    sbi IO(PORTB), LED1
+    sbi IO(PORTB), LED2
+led_end:
+
 
     ; Send result via uart
     rcall uart_send_byte
