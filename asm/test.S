@@ -66,6 +66,9 @@ main_loop_adc_wait:
     in r17, IO(ADCH)
 
 
+    ; R17:R16 = ADCH:ADCL
+    ; Ranges: 340 = 0x0154,  680 = 0x02A8
+    ;
     ; 340 ~ 1023 / 3
     ; 2(ADCH) + 168(ADCL) ~ 340*2 = 680
     ; Used "<", because no unsigned LE instruction
@@ -79,32 +82,36 @@ main_loop_adc_wait:
     ; else:
     ;   LED1 = 1
     ;   LED2 = 1
-    cpi r17, 0x1
-    brge at_least_one_led
-    cpi r16, 0x55
-    brge at_least_one_led
 
-    cbi IO(PORTB), LED1
-    cbi IO(PORTB), LED2
+    ; Compare 340
+    ldi  r18, lo8(340)
+    ldi  r19, hi8(340)
+    cp   r16, r18
+    cpc  r17, r19
+    brlo both_off
 
-    rjmp led_end
-
-at_least_one_led:
-    cpi r17, 0x3
-    brge both_led
-    cpi r16, 0xA9
-    brge both_led
-
-    sbi IO(PORTB), LED1
-    cbi IO(PORTB), LED2
-
-    rjmp led_end
+    ; Compare 680
+    ldi  r18, lo8(680)
+    ldi  r19, hi8(680)
+    cp   r16, r18
+    cpc  r17, r19
+    brlo only_led1
 
 both_led:
-    sbi IO(PORTB), LED1
-    sbi IO(PORTB), LED2
-led_end:
+    sbi  IO(PORTB), LED1
+    sbi  IO(PORTB), LED2
+    rjmp led_end
 
+only_led1:
+    sbi  IO(PORTB), LED1
+    cbi  IO(PORTB), LED2
+    rjmp led_end
+
+both_off:
+    cbi  IO(PORTB), LED1
+    cbi  IO(PORTB), LED2
+
+led_end:
 
     ; Send result via uart
     rcall uart_send_byte
